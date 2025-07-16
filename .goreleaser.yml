@@ -1,0 +1,29 @@
+# GoReleaser configuration for LazyTodo
+version: 2
+
+project_name: lazytodo
+
+# This file is kept for future reference but the release process
+# now uses GitHub Actions matrix builds for better platform compatibility
+
+release:
+  github:
+    owner: DhirajZope
+    name: lazytodo
+
+# Note: Currently using GitHub Actions matrix builds instead of GoReleaser
+# for better CGO cross-compilation support. See .github/workflows/release.yml
+
+# Archives section removed as we handle packaging in GitHub Actions
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^ci:' 

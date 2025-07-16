@@ -1,0 +1,126 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            output: lazytodo
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            output: lazytodo
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            output: lazytodo.exe
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            output: lazytodo
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            output: lazytodo
+    runs-on: ${{ matrix.os }}
+    env:
+      CGO_ENABLED: 1
+      GOOS: ${{ matrix.goos }}
+      GOARCH: ${{ matrix.goarch }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Install dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsqlite3-dev
+          if [ "${{ matrix.goarch }}" = "arm64" ]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu
+            echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+          fi
+
+      - name: Install dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install sqlite3
+
+      - name: Build binary
+        run: |
+          mkdir -p dist
+          go build -ldflags="-s -w -X main.version=${{ github.ref_name }} -X main.commit=${{ github.sha }} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o dist/${{ matrix.output }} ./cmd/main.go
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/${{ matrix.output }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release files
+        run: |
+          mkdir -p dist
+          # Create archives for each platform
+          cd artifacts
+          for dir in */; do
+            platform=$(basename "$dir")
+            cd "$dir"
+            if [[ "$platform" == *"windows"* ]]; then
+              zip "../../dist/lazytodo_${{ github.ref_name }}_${platform}.zip" *
+            else
+              tar -czf "../../dist/lazytodo_${{ github.ref_name }}_${platform}.tar.gz" *
+            fi
+            cd ..
+          done
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum * > checksums.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

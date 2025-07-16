@@ -1,0 +1,201 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  GO_VERSION: '1.21'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Run tests
+      run: go test -v -race -coverprofile=coverage.out ./...
+
+    - name: Check test coverage
+      run: |
+        go tool cover -func=coverage.out
+        # Check minimum coverage (adjust threshold as needed)
+        COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+        echo "Coverage: ${COVERAGE}%"
+        if (( $(echo "$COVERAGE < 50" | bc -l) )); then
+          echo "❌ Coverage is below 50%"
+          exit 1
+        fi
+        echo "✅ Coverage check passed"
+
+    - name: Run go vet
+      run: go vet ./...
+
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: latest
+
+    - name: Check go formatting
+      run: |
+        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+          echo "❌ Go code is not formatted:"
+          gofmt -s -l .
+          exit 1
+        fi
+        echo "✅ Go code is properly formatted"
+
+    - name: Build for multiple platforms
+      run: |
+        # Test builds for major platforms
+        echo "Building for Linux..."
+        GOOS=linux GOARCH=amd64 go build -o build/lazytodo-linux-amd64 cmd/main.go
+        
+        echo "Building for Windows..."
+        GOOS=windows GOARCH=amd64 go build -o build/lazytodo-windows-amd64.exe cmd/main.go
+        
+        echo "Building for macOS..."
+        GOOS=darwin GOARCH=amd64 go build -o build/lazytodo-darwin-amd64 cmd/main.go
+        
+        echo "✅ All builds successful"
+
+    - name: Test installation scripts
+      run: |
+        echo "Testing installation script syntax..."
+        bash -n scripts/install-linux.sh
+        bash -n scripts/install-mac.sh
+        echo "✅ Installation scripts syntax check passed"
+
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Gosec Security Scanner
+      uses: securecodewarrior/github-action-gosec@master
+      with:
+        args: '-no-fail -fmt sarif -out results.sarif ./...'
+
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: results.sarif
+
+  validate-release-assets:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Validate GitHub workflows
+      run: |
+        echo "Validating GitHub Actions workflows..."
+        # Basic YAML syntax check
+        python -c "
+        import yaml
+        import sys
+        try:
+            with open('.github/workflows/release.yml', 'r') as f:
+                yaml.safe_load(f)
+            with open('.github/workflows/ci.yml', 'r') as f:
+                yaml.safe_load(f)
+            print('✅ Workflow YAML syntax is valid')
+        except yaml.YAMLError as e:
+            print(f'❌ YAML syntax error: {e}')
+            sys.exit(1)
+        "
+
+    - name: Check installation scripts
+      run: |
+        echo "Checking installation scripts..."
+        
+        # Check if scripts are executable
+        if [ -x scripts/install-linux.sh ] && [ -x scripts/install-mac.sh ]; then
+          echo "✅ Installation scripts are executable"
+        else
+          echo "❌ Installation scripts are not executable"
+          exit 1
+        fi
+        
+        # Check script headers
+        if head -1 scripts/install-linux.sh | grep -q "#!/bin/bash" && head -1 scripts/install-mac.sh | grep -q "#!/bin/bash"; then
+          echo "✅ Installation scripts have proper shebangs"
+        else
+          echo "❌ Installation scripts missing proper shebangs"
+          exit 1
+        fi
+
+    - name: Validate .gitignore
+      run: |
+        echo "Validating .gitignore..."
+        if [ -f .gitignore ]; then
+          echo "✅ .gitignore exists"
+          # Check for essential entries
+          if grep -q "*.exe" .gitignore && grep -q "*.db" .gitignore && grep -q ".DS_Store" .gitignore; then
+            echo "✅ .gitignore contains essential patterns"
+          else
+            echo "❌ .gitignore missing essential patterns"
+            exit 1
+          fi
+        else
+          echo "❌ .gitignore does not exist"
+          exit 1
+        fi
+
+  docs:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Check documentation
+      run: |
+        echo "Checking documentation..."
+        
+        # Check if README exists
+        if [ -f README.md ]; then
+          echo "✅ README.md exists"
+        else
+          echo "⚠️ README.md not found - consider creating one"
+        fi
+        
+        # Check for license
+        if [ -f LICENSE ] || [ -f LICENSE.md ] || [ -f LICENSE.txt ]; then
+          echo "✅ License file exists"
+        else
+          echo "⚠️ License file not found - consider adding one"
+        fi
+
+    - name: Generate documentation preview
+      run: |
+        echo "📚 Documentation structure:"
+        echo "================================"
+        find . -name "*.md" -not -path "./.git/*" | head -20
+        echo ""
+        echo "📁 Project structure:"
+        echo "================================"
+        tree -a -I '.git|node_modules|vendor' -L 3 || ls -la 
