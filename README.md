@@ -27,38 +27,189 @@ A beautiful and feature-rich Terminal User Interface (TUI) todo application buil
 
 ## 🚀 Installation
 
-### Prerequisites
+### 📦 Quick Install (Recommended)
 
+**🎉 Latest Release: [v0.1.0](https://github.com/DhirajZope/lazytodo/releases/tag/v0.1.0)**
+
+Choose your platform for a one-command installation:
+
+#### 🐧 Linux
+```bash
+curl -sSL https://raw.githubusercontent.com/DhirajZope/lazytodo/master/scripts/install-linux.sh | bash
+```
+
+**Or install specific version:**
+```bash
+curl -sSL https://raw.githubusercontent.com/DhirajZope/lazytodo/master/scripts/install-linux.sh | bash -s v0.1.0
+```
+
+**Manual download:**
+```bash
+# Download directly from release
+curl -L -o lazytodo-linux-amd64.tar.gz https://github.com/DhirajZope/lazytodo/releases/download/v0.1.0/lazytodo_v0.1.0_linux-amd64.tar.gz
+tar -xzf lazytodo-linux-amd64.tar.gz
+sudo mv lazytodo /usr/local/bin/
+```
+
+**Features:**
+- 🏠 Installs to `~/.local/bin` by default
+- 🔧 Automatically configures PATH
+- 🖥️ Optional desktop entry creation
+- 🏗️ Supports AMD64 and ARM64 architectures
+
+#### 🍎 macOS
+```bash
+curl -sSL https://raw.githubusercontent.com/DhirajZope/lazytodo/master/scripts/install-mac.sh | bash
+```
+
+**Or install specific version:**
+```bash
+curl -sSL https://raw.githubusercontent.com/DhirajZope/lazytodo/master/scripts/install-mac.sh | bash -s v0.1.0
+```
+
+**Manual download:**
+```bash
+# Download directly from release (Intel)
+curl -L -o lazytodo-darwin-amd64.tar.gz https://github.com/DhirajZope/lazytodo/releases/download/v0.1.0/lazytodo_v0.1.0_darwin-amd64.tar.gz
+
+# Download directly from release (Apple Silicon)
+curl -L -o lazytodo-darwin-arm64.tar.gz https://github.com/DhirajZope/lazytodo/releases/download/v0.1.0/lazytodo_v0.1.0_darwin-arm64.tar.gz
+
+# Extract and install
+tar -xzf lazytodo-darwin-*.tar.gz
+sudo mv lazytodo /usr/local/bin/
+```
+
+**Features:**
+- 🏠 Installs to `/usr/local/bin` by default (user directory option available)
+- 🍺 Homebrew integration detection
+- 📱 Optional macOS app bundle creation
+- 🖥️ Universal binary (Intel + Apple Silicon)
+- 🐚 Shell profile auto-configuration (bash, zsh, fish)
+
+#### 🪟 Windows
+**PowerShell (Recommended - Download first):**
+```powershell
+# Download the script first to avoid encoding issues
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/DhirajZope/lazytodo/master/scripts/install-windows.ps1" -OutFile "install-windows.ps1"
+.\install-windows.ps1
+```
+
+**Or install specific version:**
+```powershell
+.\install-windows.ps1 -Version "v0.1.0"
+```
+
+**Manual Installation:**
+1. Download the Windows binary: [lazytodo_v0.1.0_windows-amd64.zip](https://github.com/DhirajZope/lazytodo/releases/download/v0.1.0/lazytodo_v0.1.0_windows-amd64.zip)
+2. Extract the ZIP file to `%LOCALAPPDATA%\LazyTodo`
+3. Add the directory to your PATH environment variable:
+   ```powershell
+   $path = [Environment]::GetEnvironmentVariable("Path", "User")
+   [Environment]::SetEnvironmentVariable("Path", "$path;$env:LOCALAPPDATA\LazyTodo", "User")
+   ```
+4. Restart your terminal and run `lazytodo.exe`
+
+**Alternative - Direct execution:**
+```powershell
+iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/DhirajZope/lazytodo/master/scripts/install-windows.ps1'))
+```
+
+**Features:**
+- 🏠 Installs to `%LOCALAPPDATA%\LazyTodo` by default
+- 🔧 Automatically adds to user PATH
+- 🖥️ Optional desktop shortcut creation
+- 🎯 PowerShell 5.0+ support
+
+### 🛠️ Advanced Installation Options
+
+#### Custom Installation Directory
+```bash
+# Linux/macOS - Custom directory
+INSTALL_DIR="/opt/lazytodo" ./install-linux.sh
+
+# Windows - Custom directory
+.\install-windows.ps1 -InstallDir "C:\Tools\LazyTodo"
+```
+
+#### Specific Version Installation
+```bash
+# Install specific version
+./install-linux.sh v1.0.0
+./install-mac.sh v1.0.0
+
+# Windows
+.\install-windows.ps1 -Version "v1.0.0"
+```
+
+### 🏗️ Build from Source
+
+#### Prerequisites
 - Go 1.23 or higher installed on your system
 - Windows, macOS, or Linux
 - CGO enabled (for SQLite support)
 
-### Build from Source
-
+#### Steps
 1. Clone the repository:
-```powershell
+```bash
 git clone https://github.com/DhirajZope/lazytodo.git
 cd lazytodo
 ```
 
 2. Install dependencies:
-```powershell
+```bash
 go mod tidy
 ```
 
 3. Build the application:
-```powershell
+```bash
+# Windows
 go build -o lazytodo.exe cmd/main.go
+
+# macOS/Linux
+go build -o lazytodo cmd/main.go
 ```
 
 4. Run the application:
-```powershell
+```bash
+# Windows
 .\lazytodo.exe
+
+# macOS/Linux
+./lazytodo
 ```
 
 Or run directly with Go:
-```powershell
+```bash
 go run cmd/main.go
+```
+
+### 📋 Post-Installation
+
+After installation, you may need to:
+
+1. **Restart your terminal** to use the `lazytodo` command
+2. **Or run directly** using the full path shown by the installer
+3. **Verify installation** by running:
+   ```bash
+   lazytodo --version
+   ```
+
+### 🔧 Installation Troubleshooting
+
+#### Common Issues:
+- **Command not found**: Restart terminal or manually add install directory to PATH
+- **Permission denied**: On macOS/Linux, ensure install directory is writable or use sudo
+- **Download fails**: Check internet connection and firewall settings
+- **Binary won't run**: Ensure executable permissions (`chmod +x lazytodo`)
+
+#### Manual PATH Configuration:
+```bash
+# Linux/macOS - Add to ~/.bashrc, ~/.zshrc, etc.
+export PATH="$PATH:$HOME/.local/bin"
+
+# Windows - Add to user PATH environment variable
+setx PATH "%PATH%;%LOCALAPPDATA%\LazyTodo"
 ```
 
 ## 🎮 Usage

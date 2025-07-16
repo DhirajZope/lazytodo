@@ -9,7 +9,7 @@ set -e
 VERSION="${1:-latest}"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 CONFIG_DIR="${HOME}/.config/lazytodo"
-REPO_URL="https://github.com/yourusername/lazytodo"
+REPO_URL="https://github.com/DhirajZope/lazytodo"
 
 # Colors for output
 RED='\033[0;31m'
@@ -109,9 +109,9 @@ download_release() {
     print_info "$PACKAGE Downloading LazyTodo..."
     
     # Get release information
-    local api_url="https://api.github.com/repos/yourusername/lazytodo/releases/latest"
+    local api_url="https://api.github.com/repos/DhirajZope/lazytodo/releases/latest"
     if [[ "$VERSION" != "latest" ]]; then
-        api_url="https://api.github.com/repos/yourusername/lazytodo/releases/tags/$VERSION"
+        api_url="https://api.github.com/repos/DhirajZope/lazytodo/releases/tags/$VERSION"
     fi
     
     if command_exists curl; then

@@ -27,88 +27,95 @@ function Test-Administrator {
 }
 
 # Header
-Write-ColorText "🚀 LazyTodo Windows Installer" $InfoColor
-Write-ColorText "==============================" $InfoColor
+Write-ColorText "[INSTALL] LazyTodo Windows Installer" $InfoColor
+Write-ColorText "=====================================" $InfoColor
 Write-Host ""
 
 # Check PowerShell version
 if ($PSVersionTable.PSVersion.Major -lt 5) {
-    Write-ColorText "❌ PowerShell 5.0 or higher is required. Current version: $($PSVersionTable.PSVersion)" $ErrorColor
+    Write-ColorText "[ERROR] PowerShell 5.0 or higher is required. Current version: $($PSVersionTable.PSVersion)" $ErrorColor
     exit 1
 }
 
 # Create installation directory
-Write-ColorText "📁 Creating installation directory..." $InfoColor
+Write-ColorText "[INFO] Creating installation directory..." $InfoColor
 try {
     if (!(Test-Path $InstallDir)) {
         New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-        Write-ColorText "✅ Created directory: $InstallDir" $SuccessColor
+        Write-ColorText "[SUCCESS] Created directory: $InstallDir" $SuccessColor
     } else {
-        Write-ColorText "📂 Directory already exists: $InstallDir" $WarningColor
+        Write-ColorText "[INFO] Directory already exists: $InstallDir" $WarningColor
     }
-} catch {
-    Write-ColorText "❌ Failed to create installation directory: $($_.Exception.Message)" $ErrorColor
+}
+catch {
+    Write-ColorText "[ERROR] Failed to create installation directory: $($_.Exception.Message)" $ErrorColor
     exit 1
 }
 
 # Download latest release
-Write-ColorText "⬇️  Downloading LazyTodo..." $InfoColor
+Write-ColorText "[INFO] Downloading LazyTodo..." $InfoColor
 try {
-    $apiUrl = "https://api.github.com/repos/yourusername/lazytodo/releases/latest"
+    $apiUrl = "https://api.github.com/repos/DhirajZope/lazytodo/releases/latest"
     if ($Version -ne "latest") {
-        $apiUrl = "https://api.github.com/repos/yourusername/lazytodo/releases/tags/$Version"
+        $apiUrl = "https://api.github.com/repos/DhirajZope/lazytodo/releases/tags/$Version"
     }
     
     $release = Invoke-RestMethod -Uri $apiUrl -ErrorAction Stop
     $asset = $release.assets | Where-Object { $_.name -match "lazytodo.*windows.*\.zip" } | Select-Object -First 1
     
     if (!$asset) {
-        Write-ColorText "❌ No Windows binary found in release $($release.tag_name)" $ErrorColor
+        Write-ColorText "[ERROR] No Windows binary found in release $($release.tag_name)" $ErrorColor
         exit 1
     }
     
     $downloadUrl = $asset.browser_download_url
     $zipPath = Join-Path $env:TEMP "lazytodo-windows.zip"
     
-    Write-ColorText "📦 Downloading: $($asset.name)" $InfoColor
+    Write-ColorText "[INFO] Downloading: $($asset.name)" $InfoColor
     Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath -ErrorAction Stop
-    Write-ColorText "✅ Downloaded successfully" $SuccessColor
-    
-} catch {
-    Write-ColorText "❌ Failed to download: $($_.Exception.Message)" $ErrorColor
+    Write-ColorText "[SUCCESS] Downloaded successfully" $SuccessColor
+}
+catch {
+    Write-ColorText "[ERROR] Failed to download: $($_.Exception.Message)" $ErrorColor
     exit 1
 }
 
 # Extract and install
-Write-ColorText "📦 Extracting files..." $InfoColor
+Write-ColorText "[INFO] Extracting files..." $InfoColor
 try {
     Expand-Archive -Path $zipPath -DestinationPath $InstallDir -Force
     Remove-Item $zipPath -Force
-    Write-ColorText "✅ Extraction completed" $SuccessColor
-} catch {
-    Write-ColorText "❌ Failed to extract: $($_.Exception.Message)" $ErrorColor
+    Write-ColorText "[SUCCESS] Extraction completed" $SuccessColor
+}
+catch {
+    Write-ColorText "[ERROR] Failed to extract: $($_.Exception.Message)" $ErrorColor
     exit 1
 }
 
 # Add to PATH
-Write-ColorText "🔧 Configuring PATH..." $InfoColor
+Write-ColorText "[INFO] Configuring PATH..." $InfoColor
 try {
     $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
     if ($userPath -notlike "*$InstallDir*") {
-        $newPath = if ($userPath) { "$userPath;$InstallDir" } else { $InstallDir }
+        if ($userPath) {
+            $newPath = "$userPath;$InstallDir"
+        } else {
+            $newPath = $InstallDir
+        }
         [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
-        Write-ColorText "✅ Added $InstallDir to user PATH" $SuccessColor
-        Write-ColorText "⚠️  Please restart your terminal to use 'lazytodo' command" $WarningColor
+        Write-ColorText "[SUCCESS] Added $InstallDir to user PATH" $SuccessColor
+        Write-ColorText "[WARNING] Please restart your terminal to use 'lazytodo' command" $WarningColor
     } else {
-        Write-ColorText "📂 Installation directory already in PATH" $InfoColor
+        Write-ColorText "[INFO] Installation directory already in PATH" $InfoColor
     }
-} catch {
-    Write-ColorText "⚠️  Could not add to PATH. You may need to add manually: $InstallDir" $WarningColor
+}
+catch {
+    Write-ColorText "[WARNING] Could not add to PATH. You may need to add manually: $InstallDir" $WarningColor
 }
 
 # Create desktop shortcut (optional)
-$createShortcut = Read-Host "🖥️  Create desktop shortcut? (y/N)"
-if ($createShortcut -eq "y" -or $createShortcut -eq "Y") {
+$createShortcut = Read-Host "[PROMPT] Create desktop shortcut? (y/N)"
+if (($createShortcut -eq "y") -or ($createShortcut -eq "Y")) {
     try {
         $WshShell = New-Object -comObject WScript.Shell
         $Shortcut = $WshShell.CreateShortcut("$env:USERPROFILE\Desktop\LazyTodo.lnk")
@@ -116,41 +123,44 @@ if ($createShortcut -eq "y" -or $createShortcut -eq "Y") {
         $Shortcut.WorkingDirectory = $InstallDir
         $Shortcut.Description = "LazyTodo - Beautiful Terminal Todo Manager"
         $Shortcut.Save()
-        Write-ColorText "✅ Desktop shortcut created" $SuccessColor
-    } catch {
-        Write-ColorText "⚠️  Could not create desktop shortcut" $WarningColor
+        Write-ColorText "[SUCCESS] Desktop shortcut created" $SuccessColor
+    }
+    catch {
+        Write-ColorText "[WARNING] Could not create desktop shortcut" $WarningColor
     }
 }
 
 # Installation complete
 Write-Host ""
-Write-ColorText "🎉 Installation Complete!" $SuccessColor
-Write-ColorText "========================" $SuccessColor
+Write-ColorText "[SUCCESS] Installation Complete!" $SuccessColor
+Write-ColorText "=========================" $SuccessColor
 Write-ColorText "Installation Directory: $InstallDir" $InfoColor
-Write-ColorText "Executable: $(Join-Path $InstallDir 'lazytodo.exe')" $InfoColor
+$exePath = Join-Path $InstallDir 'lazytodo.exe'
+Write-ColorText "Executable: $exePath" $InfoColor
 Write-Host ""
-Write-ColorText "📚 Getting Started:" $InfoColor
-Write-ColorText "  • Open a new terminal and run: lazytodo" $InfoColor
-Write-ColorText "  • Or run directly: `"$InstallDir\lazytodo.exe`"" $InfoColor
-Write-ColorText "  • Press 'n' to create your first todo list" $InfoColor
-Write-ColorText "  • Press '?' for help" $InfoColor
+Write-ColorText "Getting Started:" $InfoColor
+Write-ColorText "  * Open a new terminal and run: lazytodo" $InfoColor
+Write-ColorText "  * Or run directly: `"$InstallDir\lazytodo.exe`"" $InfoColor
+Write-ColorText "  * Press 'n' to create your first todo list" $InfoColor
+Write-ColorText "  * Press '?' for help" $InfoColor
 Write-Host ""
-Write-ColorText "🔗 Documentation: https://github.com/yourusername/lazytodo" $InfoColor
+Write-ColorText "Documentation: https://github.com/DhirajZope/lazytodo" $InfoColor
 Write-Host ""
 
 # Test installation
-$testRun = Read-Host "🧪 Test installation now? (y/N)"
-if ($testRun -eq "y" -or $testRun -eq "Y") {
-    Write-ColorText "🧪 Testing installation..." $InfoColor
+$testRun = Read-Host "[PROMPT] Test installation now? (y/N)"
+if (($testRun -eq "y") -or ($testRun -eq "Y")) {
+    Write-ColorText "[INFO] Testing installation..." $InfoColor
     try {
         $lazyTodoPath = Join-Path $InstallDir "lazytodo.exe"
         if (Test-Path $lazyTodoPath) {
             & $lazyTodoPath --version
-            Write-ColorText "✅ Installation test successful!" $SuccessColor
+            Write-ColorText "[SUCCESS] Installation test successful!" $SuccessColor
         } else {
-            Write-ColorText "❌ Binary not found at expected location" $ErrorColor
+            Write-ColorText "[ERROR] Binary not found at expected location" $ErrorColor
         }
-    } catch {
-        Write-ColorText "⚠️  Could not test installation: $($_.Exception.Message)" $WarningColor
+    }
+    catch {
+        Write-ColorText "[WARNING] Could not test installation: $($_.Exception.Message)" $WarningColor
     }
 } 
