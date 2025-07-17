@@ -224,9 +224,20 @@ configure_path() {
         echo "# Added by LazyTodo installer" >> "$shell_profile"
         echo "export PATH=\"\$PATH:$INSTALL_DIR\"" >> "$shell_profile"
         print_success "Added $INSTALL_DIR to PATH in $shell_profile"
-        print_warning "Please restart your terminal or run: source $shell_profile"
+        
+        # Update PATH for current session
+        export PATH="$PATH:$INSTALL_DIR"
+        print_info "PATH updated for current session"
     else
         print_warning "Could not detect shell profile. Please add $INSTALL_DIR to your PATH manually"
+    fi
+    
+    # Verify PATH configuration
+    print_info "Verifying PATH configuration..."
+    if command_exists lazytodo; then
+        print_success "lazytodo command is available in PATH"
+    else
+        print_warning "lazytodo not found in PATH. You may need to restart your terminal or run: source $shell_profile"
     fi
 }
 
@@ -317,12 +328,40 @@ main() {
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         print_info "Testing installation..."
+        
+        # Test version command
+        print_info "Testing version command..."
         if "$INSTALL_DIR/lazytodo" --version 2>/dev/null; then
-            print_success "Installation test successful!"
+            print_success "Version command successful!"
+            
+            # Test database initialization
+            print_info "Testing database initialization..."
+            if "$INSTALL_DIR/lazytodo" --info >/dev/null 2>&1; then
+                print_success "Database initialization successful!"
+                print_info "Database info:"
+                "$INSTALL_DIR/lazytodo" --info | sed 's/^/  /'
+            else
+                print_warning "Database initialization failed. This might be a first-run issue."
+                print_info "Common solutions:"
+                print_info "  • If you see migration errors, delete the database file:"
+                print_info "    rm -f ~/.lazytodo/lazytodo.db"
+                print_info "  • Then run: lazytodo --info"
+            fi
+            
+            print_success "Installation test completed!"
         else
             print_warning "Could not test installation, but binary is installed"
         fi
     fi
+    
+    # Final instructions
+    echo
+    print_info "Installation Notes:"
+    print_warning "  • If you encounter database migration errors on first run:"
+    print_info "    rm -f ~/.lazytodo/lazytodo.db"
+    print_warning "  • If 'lazytodo' command not found, restart your terminal"
+    print_info "  • Or run directly: $INSTALL_DIR/lazytodo"
+    echo
     
     print_success "LazyTodo is ready! Enjoy organizing your tasks! $CHECKMARK"
 }

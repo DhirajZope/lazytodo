@@ -198,10 +198,49 @@ After installation, you may need to:
 ### 🔧 Installation Troubleshooting
 
 #### Common Issues:
-- **Command not found**: Restart terminal or manually add install directory to PATH
-- **Permission denied**: On macOS/Linux, ensure install directory is writable or use sudo
-- **Download fails**: Check internet connection and firewall settings
-- **Binary won't run**: Ensure executable permissions (`chmod +x lazytodo`)
+
+**❌ Database Migration Error:**
+```
+Failed to initialize application: failed to create storage: failed to create database storage: failed to run migrations: failed to record initial migration: UNIQUE constraint failed: schema_migrations.version
+```
+
+**Solution:**
+```bash
+# Delete the corrupted database file
+rm -f ~/.lazytodo/lazytodo.db                    # Linux/macOS
+Remove-Item "$env:USERPROFILE\.lazytodo\lazytodo.db" -Force  # Windows
+
+# Verify the fix
+lazytodo --info
+```
+
+**❌ Command not found: lazytodo**
+
+**Solutions:**
+1. **Restart your terminal** (most common solution)
+2. **Refresh PATH in current session:**
+   ```bash
+   # Linux/macOS
+   source ~/.bashrc  # or ~/.zshrc, ~/.profile
+   
+   # Windows PowerShell
+   $env:PATH = [Environment]::GetEnvironmentVariable('Path', 'User')
+   ```
+3. **Run directly:** Use the full path shown by the installer
+
+**❌ Permission denied (macOS/Linux)**
+```bash
+# Make binary executable
+chmod +x /usr/local/bin/lazytodo
+
+# Or install to user directory instead
+INSTALL_DIR="$HOME/.local/bin" ./install-linux.sh
+```
+
+**❌ Download fails**
+- Check internet connection and firewall settings
+- Try manual download from [GitHub Releases](https://github.com/DhirajZope/lazytodo/releases)
+- Use alternative installation method
 
 #### Manual PATH Configuration:
 ```bash
@@ -210,6 +249,18 @@ export PATH="$PATH:$HOME/.local/bin"
 
 # Windows - Add to user PATH environment variable
 setx PATH "%PATH%;%LOCALAPPDATA%\LazyTodo"
+```
+
+#### Verification Commands:
+```bash
+# Check if installed correctly
+lazytodo --version
+
+# Check database status
+lazytodo --info
+
+# Test basic functionality
+lazytodo --help
 ```
 
 ## 🎮 Usage

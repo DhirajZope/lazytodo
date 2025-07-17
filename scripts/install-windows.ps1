@@ -104,13 +104,30 @@ try {
         }
         [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
         Write-ColorText "[SUCCESS] Added $InstallDir to user PATH" $SuccessColor
-        Write-ColorText "[WARNING] Please restart your terminal to use 'lazytodo' command" $WarningColor
+        
+        # Refresh PATH for current session
+        $env:PATH = [Environment]::GetEnvironmentVariable("Path", "User")
+        Write-ColorText "[INFO] PATH refreshed for current session" $InfoColor
     } else {
         Write-ColorText "[INFO] Installation directory already in PATH" $InfoColor
     }
 }
 catch {
     Write-ColorText "[WARNING] Could not add to PATH. You may need to add manually: $InstallDir" $WarningColor
+}
+
+# Verify PATH configuration
+Write-ColorText "[INFO] Verifying PATH configuration..." $InfoColor
+try {
+    $pathCheck = Get-Command "lazytodo" -ErrorAction SilentlyContinue
+    if ($pathCheck) {
+        Write-ColorText "[SUCCESS] lazytodo command is available in PATH" $SuccessColor
+    } else {
+        Write-ColorText "[WARNING] lazytodo not found in PATH. You may need to restart your terminal" $WarningColor
+    }
+}
+catch {
+    Write-ColorText "[WARNING] Could not verify PATH configuration" $WarningColor
 }
 
 # Create desktop shortcut (optional)
@@ -151,16 +168,45 @@ Write-Host ""
 $testRun = Read-Host "[PROMPT] Test installation now? (y/N)"
 if (($testRun -eq "y") -or ($testRun -eq "Y")) {
     Write-ColorText "[INFO] Testing installation..." $InfoColor
+    
     try {
         $lazyTodoPath = Join-Path $InstallDir "lazytodo.exe"
         if (Test-Path $lazyTodoPath) {
+            # Test version command
+            Write-ColorText "[INFO] Testing version command..." $InfoColor
             & $lazyTodoPath --version
-            Write-ColorText "[SUCCESS] Installation test successful!" $SuccessColor
+            
+            # Test database initialization
+            Write-ColorText "[INFO] Testing database initialization..." $InfoColor
+            $infoOutput = & $lazyTodoPath --info 2>&1
+            
+            if ($LASTEXITCODE -eq 0) {
+                Write-ColorText "[SUCCESS] Database initialization successful!" $SuccessColor
+                Write-ColorText "[INFO] Database info:" $InfoColor
+                $infoOutput | ForEach-Object { Write-ColorText "  $($_)" $InfoColor }
+            } else {
+                Write-ColorText "[WARNING] Database initialization failed. This might be a first-run issue." $WarningColor
+                Write-ColorText "[INFO] Common solutions:" $InfoColor
+                Write-ColorText "  * If you see migration errors, delete the database file:" $InfoColor
+                Write-ColorText "    Remove-Item `"$env:USERPROFILE\.lazytodo\lazytodo.db`" -Force" $InfoColor
+                Write-ColorText "  * Then run: lazytodo --info" $InfoColor
+            }
+            
+            Write-ColorText "[SUCCESS] Installation test completed!" $SuccessColor
         } else {
             Write-ColorText "[ERROR] Binary not found at expected location" $ErrorColor
         }
     }
     catch {
-        Write-ColorText "[WARNING] Could not test installation: $($_.Exception.Message)" $WarningColor
+        Write-ColorText "[WARNING] Could not complete installation test: $($_.Exception.Message)" $WarningColor
+        Write-ColorText "[INFO] This is usually not critical - the installation may still work" $WarningColor
     }
-} 
+}
+
+# Final instructions
+Write-Host ""
+Write-ColorText "[INFO] Installation Notes:" $InfoColor
+Write-ColorText "  * If you encounter database migration errors on first run:" $WarningColor
+Write-ColorText "    Remove-Item `"$env:USERPROFILE\.lazytodo\lazytodo.db`" -Force" $InfoColor
+Write-ColorText "  * If 'lazytodo' command not found, restart your terminal" $WarningColor
+Write-ColorText "  * Or run directly: `"$InstallDir\lazytodo.exe`"" $InfoColor 
